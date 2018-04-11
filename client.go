@@ -1,3 +1,4 @@
+// This package provides easy access to http://restpack.io API services from Go applications
 package gorestpack
 
 import (
