@@ -1,7 +1,7 @@
 
 
 # gorestpack
-`import "."`
+`import "github.com/restpackio/gorestpack"`
 
 * [Overview](#pkg-overview)
 * [Index](#pkg-index)
@@ -24,7 +24,7 @@ This package provides easy access to <a href="http://restpack.io">http://restpac
 
 
 #### <a name="pkg-files">Package files</a>
-[client.go](/src/target/client.go) [html2pdf.go](/src/target/html2pdf.go) [screenshot.go](/src/target/screenshot.go) 
+[client.go](/src/github.com/restpackio/gorestpack/client.go) [html2pdf.go](/src/github.com/restpackio/gorestpack/html2pdf.go) [screenshot.go](/src/github.com/restpackio/gorestpack/screenshot.go) 
 
 
 
