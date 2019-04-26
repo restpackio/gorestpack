@@ -13,15 +13,13 @@ func NewHTMLToPDFClient(accessToken string) HTMLToPDFClient {
 		client: &client{
 			httpClient:  request.New(),
 			accessToken: accessToken,
-			basePath:    "https://restpack.io/api/html2pdf/v3",
+			basePath:    "https://restpack.io/api/html2pdf/v5",
 		},
 	}
 }
 
 // Options supplied to the Restpack Screenshot API for conversion
 type HTMLToPDFCaptureOptions struct {
-	// Force rendering a new pdf disregarding the cache status.
-	Fresh bool `json:"fresh,omitempty"`
 	// Custom page size for created document
 	PDFPage string `json:"pdf_page,omitempty"`
 	// CSS style margin sizes.
@@ -34,8 +32,8 @@ type HTMLToPDFCaptureOptions struct {
 	JS string `json:"js,omitempty"`
 	// Time in milliseconds to delay capture after page load
 	Delay int `json:"delay,omitempty"`
-	// Time in milliseconds for the resulting image to be cached for further requests.
-	TTL int `json:"ttl,omitempty"`
+	// Time in seconds for the resulting image to be cached for further requests.
+	CacheTTL int `json:"cache_ttl,omitempty"`
 	// Custom user-agent header string for the web request.
 	UserAgent string `json:"user_agent,omitempty"`
 	// Custom accept-language header string for the web request.
@@ -50,6 +48,22 @@ type HTMLToPDFCaptureOptions struct {
 	Wait string `json:"wait,omitempty"`
 	// Wait until a DOM element matching the provided css selector becomes present on the page.
 	Shutter string `json:"shutter,omitempty"`
+	// Ensure that the captured document does not get cached / stored for further use
+	Privacy bool `json:"privacy,omitempty"`
+	// If specified, ensures that the resulting file is saved with the given name.
+	Filename string `json:"filename,omitempty"`
+	//Custom pdf page width. Must be used together with PdfHeight
+	PdfWidth string `json:"pdf_width,omitempty"`
+	//Custom pdf page height. Check PdfWidth for details.
+	PdfHeight string `json:"pdf_height,omitempty"`
+	//HTML template for page header. It should have a valid markup and can contain elements with classes 'pageNumber', 'totalPages', 'url', 'title' or 'date'. Header is automatically added to all pages. Note that you need to have top margins on your documents in order to have the header show up.
+	PdfHeader string `json:"pdf_header,omitempty"`
+	//HTML template for page footer. Please check pdf_header information for details.
+	PdfFooter string `json:"pdf_footer,omitempty"`
+	//Removes the ads on the page
+	BlockAds bool `json:"block_ads,omitempty"`
+	//Block / hide European Union cookie warnings before capture.
+	BlockCookieWarnings bool `json:"block_cookie_warnings,omitempty"`
 }
 
 type htmlToPDFCallOptions struct {
