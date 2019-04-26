@@ -24,8 +24,6 @@ func NewScreenshotClient(accessToken string) ScreenshotClient {
 
 // Options supplied to the Restpack Screenshot API for conversion
 type ScreenshotCaptureOptions struct {
-	// Force rendering a new screenshot disregarding the cache status.
-	Fresh bool `json:"fresh,omitempty"`
 	// Capturing mode.
 	Mode string `json:"mode,omitempty"`
 	// Preferred image output format. If you need a raw html string you can pass html as format
@@ -44,8 +42,8 @@ type ScreenshotCaptureOptions struct {
 	JS string `json:"js,omitempty"`
 	// Time in milliseconds to delay capture after page load
 	Delay int `json:"delay,omitempty"`
-	// Time in milliseconds for the resulting image to be cached for further requests.
-	TTL int `json:"ttl,omitempty"`
+	// Time in seconds for the resulting image to be cached for further requests.
+	CacheTTL int `json:"cache_ttl,omitempty"`
 	// Custom user-agent header string for the web request.
 	UserAgent string `json:"user_agent,omitempty"`
 	// Custom accept-language header string for the web request.
@@ -64,6 +62,16 @@ type ScreenshotCaptureOptions struct {
 	Wait string `json:"wait,omitempty"`
 	// Wait until a DOM element matching the provided css selector becomes present on the page.
 	Shutter string `json:"shutter,omitempty"`
+	// Ensure that the captured document does not get cached / stored for further use
+	Privacy bool `json:"privacy,omitempty"`
+	// If specified, ensures that the resulting file is saved with the given name.
+	Filename string `json:"filename,omitempty"`
+	//Removes the ads on the page
+	BlockAds bool `json:"block_ads,omitempty"`
+	//Block / hide European Union cookie warnings before capture.
+	BlockCookieWarnings bool `json:"block_cookie_warnings,omitempty"`
+	// Do not render with default white background. You can use this option to generate transparent PNG images
+	OmitBackground bool `json:"omit_background,omitempty"`
 }
 
 type screenshotCallOptions struct {
