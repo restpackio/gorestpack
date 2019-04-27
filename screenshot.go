@@ -43,7 +43,7 @@ type ScreenshotCaptureOptions struct {
 	JS string `json:"js,omitempty"`
 	// Time in milliseconds to delay capture after page load
 	Delay int `json:"delay,omitempty"`
-	// Time in seconds for the resulting image to be cached for further requests.
+	// Time in milliseconds for the resulting image to be cached for further requests.
 	CacheTTL int `json:"cache_ttl,omitempty"`
 	// Custom user-agent header string for the web request.
 	UserAgent string `json:"user_agent,omitempty"`
