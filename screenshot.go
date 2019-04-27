@@ -80,7 +80,7 @@ type ScreenshotCaptureResult struct {
 	Width        string `json:"width,omitempty"`
 	Height       string `json:"height,omitempty"`
 	RemoteStatus string `json:"remote_status,omitempty"`
-	Cached       bool   `json:"cached,omitempty"`
+	Cached       bool   `json:"cached,string,omitempty"`
 	URL          string `json:"url,omitempty"`
 }
 
