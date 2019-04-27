@@ -89,17 +89,17 @@ type ScreenshotClient interface {
 	// Capture a URL and return the information & cdn url
 	Capture(url string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
 	// Capture a HTML snippet and return the information & cdn url
-	CaptureHTML(url string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
+	CaptureHTML(html string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
 
 	// Capture a URL and return the image
 	CaptureToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error)
 	// Capture a HTML snippet and return the information & cdn url
-	CaptureHTMLToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error)
+	CaptureHTMLToImage(html string, options ...ScreenshotCaptureOptions) (image.Image, error)
 
 	// Capture a URL and return a reader for resulting image
 	CaptureToReader(url string, options ...ScreenshotCaptureOptions) (io.Reader, error)
 	// Capture a HTML snippet and returna a reader for resulting image
-	CaptureHTMLToReader(url string, options ...ScreenshotCaptureOptions) (io.Reader, error)
+	CaptureHTMLToReader(html string, options ...ScreenshotCaptureOptions) (io.Reader, error)
 }
 
 type screenshotClient struct {
