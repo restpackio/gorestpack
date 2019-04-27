@@ -21,7 +21,11 @@ func Test_HTML2PDF_InvalidToken(t *testing.T) {
 	_, err := client.Capture("https://google.com/")
 
 	if err == nil {
-		t.Errorf("Must return error with invalid token")
+		t.Errorf("Must return error")
+	}
+
+	if err.Error() != "The access token is invalid or you are not subscribed to any plan. Please visit the API console and choose your subscription plan." {
+		t.Errorf("Must return error with invalid token warning")
 	}
 }
 
