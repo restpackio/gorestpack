@@ -5,15 +5,10 @@ import (
 	"testing"
 )
 
-func Test_Screenshot_ValidToken(t *testing.T) {
-	token := os.Getenv("SS_TOKEN")
-
-	client := NewScreenshotClient(token)
-	_, err := client.Capture("https://google.com/")
-
-	if err != nil {
-		t.Errorf("Error: %s", err.Error())
-	}
+func Png(buf []byte) bool {
+	return len(buf) > 3 &&
+		buf[0] == 0x89 && buf[1] == 0x50 &&
+		buf[2] == 0x4E && buf[3] == 0x47
 }
 
 func Test_Screenshot_InvalidToken(t *testing.T) {
@@ -29,40 +24,74 @@ func Test_Screenshot_InvalidToken(t *testing.T) {
 	}
 }
 
-func Test_Screenshot_404(t *testing.T) {
+func Test_Screenshot_Capture(t *testing.T) {
+	token := os.Getenv("SS_TOKEN")
+
+	client := NewScreenshotClient(token)
+	resp, err := client.Capture("https://google.com/")
+
+	if err != nil {
+		t.Errorf("Error: %s", err.Error())
+	}
+
+	if resp.Image == "" {
+		t.Errorf("Must return screenshot image: get empty")
+	}
+}
+
+func Test_Screenshot_Capture_404(t *testing.T) {
 	token := os.Getenv("SS_TOKEN")
 
 	client := NewScreenshotClient(token)
 	_, err := client.Capture("https://google/")
 
 	if err == nil {
-		t.Errorf("Must return error with net::ERR_NAME_NOT_RESOLVED: %s", err.Error())
+		t.Errorf("Must return error")
+	}
+
+	if err.Error() != "net::ERR_NAME_NOT_RESOLVED at https://google/" {
+		t.Errorf("Must return net::ERR_NAME_NOT_RESOLVED")
 	}
 }
 
-func Test_Screenshot_ValidToken_Render(t *testing.T) {
+func Test_Screenshot_CaptureToReader(t *testing.T) {
 	token := os.Getenv("SS_TOKEN")
 
 	client := NewScreenshotClient(token)
-	_, err := client.CaptureToReader("https://google.com")
+	resp, err := client.CaptureToReader("https://google.com")
 
 	if err != nil {
 		t.Errorf("Error: %s", err.Error())
 	}
-}
 
-func Test_Screenshot_ValidToken_Render_404(t *testing.T) {
-	token := os.Getenv("SS_TOKEN")
+	buffer := make([]byte, 4)
+	_, err = resp.Read(buffer)
 
-	client := NewScreenshotClient(token)
-	_, err := client.CaptureToReader("https://google.coddm")
+	if err != nil {
+		t.Errorf("Error: %s", err.Error())
+	}
 
-	if err == nil {
-		t.Errorf("Must return error with net::ERR_NAME_NOT_RESOLVED: %s", err.Error())
+	if Png(buffer) != true {
+		t.Errorf("Must return png file")
 	}
 }
 
-func Test_Screenshot_ValidToken_Image(t *testing.T) {
+func Test_Screenshot_CaptureToReader_404(t *testing.T) {
+	token := os.Getenv("SS_TOKEN")
+
+	client := NewScreenshotClient(token)
+	_, err := client.CaptureToReader("https://google")
+
+	if err == nil {
+		t.Errorf("Must return error")
+	}
+
+	if err.Error() != "400 Bad Request" {
+		t.Errorf("Must return 400 Bad Request")
+	}
+}
+
+func Test_Screenshot_Image(t *testing.T) {
 	token := os.Getenv("SS_TOKEN")
 
 	client := NewScreenshotClient(token)
@@ -73,14 +102,18 @@ func Test_Screenshot_ValidToken_Image(t *testing.T) {
 	}
 }
 
-func Test_Screenshot_ValidToken_Image_404(t *testing.T) {
+func Test_Screenshot_Image_404(t *testing.T) {
 	token := os.Getenv("SS_TOKEN")
 
 	client := NewScreenshotClient(token)
 	_, err := client.CaptureToImage("https://google.coddm")
 
 	if err == nil {
-		t.Errorf("Must return error with net::ERR_NAME_NOT_RESOLVED: %s", err.Error())
+		t.Errorf("Must return error")
+	}
+
+	if err.Error() != "400 Bad Request" {
+		t.Errorf("Must return 400 Bad Request")
 	}
 }
 
@@ -114,9 +147,20 @@ func Test_Screenshot_Capture_HTML_Reader(t *testing.T) {
 	token := os.Getenv("SS_TOKEN")
 
 	client := NewScreenshotClient(token)
-	_, err := client.CaptureHTMLToReader("<h1>Test</h1>")
+	resp, err := client.CaptureHTMLToReader("<h1>Test</h1>")
 
 	if err != nil {
 		t.Errorf("Error: %s", err.Error())
+	}
+
+	buffer := make([]byte, 4)
+	_, err = resp.Read(buffer)
+
+	if err != nil {
+		t.Errorf("Error: %s", err.Error())
+	}
+
+	if Png(buffer) != true {
+		t.Errorf("Must return png file")
 	}
 }
