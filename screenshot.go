@@ -2,6 +2,7 @@ package gorestpack
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"io"
 
@@ -115,9 +116,21 @@ func (me *screenshotClient) Capture(url string, options ...ScreenshotCaptureOpti
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	var res ScreenshotCaptureResult
-	_, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		ScreenshotCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return ScreenshotCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.ScreenshotCaptureResult, errors.New(res.Error)
+	}
+
+	return res.ScreenshotCaptureResult, err
 }
 
 func (me *screenshotClient) CaptureHTML(html string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error) {
@@ -130,9 +143,21 @@ func (me *screenshotClient) CaptureHTML(html string, options ...ScreenshotCaptur
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	var res ScreenshotCaptureResult
-	_, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		ScreenshotCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return ScreenshotCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.ScreenshotCaptureResult, errors.New(res.Error)
+	}
+
+	return res.ScreenshotCaptureResult, err
 }
 
 func (me *screenshotClient) CaptureToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error) {
@@ -145,10 +170,14 @@ func (me *screenshotClient) CaptureToImage(url string, options ...ScreenshotCapt
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(body))
@@ -166,10 +195,14 @@ func (me *screenshotClient) CaptureHTMLToImage(html string, options ...Screensho
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(body))
@@ -187,10 +220,14 @@ func (me *screenshotClient) CaptureToReader(url string, options ...ScreenshotCap
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
@@ -206,10 +243,14 @@ func (me *screenshotClient) CaptureHTMLToReader(html string, options ...Screensh
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err

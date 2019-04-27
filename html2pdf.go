@@ -2,6 +2,7 @@ package gorestpack
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"github.com/eknkc/request"
@@ -65,7 +66,7 @@ type HTMLToPDFCaptureResult struct {
 	Width        string `json:"width,omitempty"`
 	Height       string `json:"height,omitempty"`
 	RemoteStatus string `json:"remote_status,omitempty"`
-	Cached       bool   `json:"cached,omitempty"`
+	Cached       bool   `json:"cached,string,omitempty"`
 	URL          string `json:"url,omitempty"`
 }
 
@@ -96,9 +97,21 @@ func (me *htmlToPDFClient) Capture(url string, options ...HTMLToPDFCaptureOption
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	var res HTMLToPDFCaptureResult
-	_, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		HTMLToPDFCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return HTMLToPDFCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.HTMLToPDFCaptureResult, errors.New(res.Error)
+	}
+
+	return res.HTMLToPDFCaptureResult, err
 }
 
 func (me *htmlToPDFClient) CaptureHTML(html string, options ...HTMLToPDFCaptureOptions) (HTMLToPDFCaptureResult, error) {
@@ -111,9 +124,21 @@ func (me *htmlToPDFClient) CaptureHTML(html string, options ...HTMLToPDFCaptureO
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	var res HTMLToPDFCaptureResult
-	_, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		HTMLToPDFCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return HTMLToPDFCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.HTMLToPDFCaptureResult, errors.New(res.Error)
+	}
+
+	return res.HTMLToPDFCaptureResult, err
 }
 
 func (me *htmlToPDFClient) CaptureToReader(url string, options ...HTMLToPDFCaptureOptions) (io.Reader, error) {
@@ -126,10 +151,14 @@ func (me *htmlToPDFClient) CaptureToReader(url string, options ...HTMLToPDFCaptu
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/convert").JSON(opt).End()
+	resp, body, err := me.do("POST", "/convert").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
@@ -145,10 +174,14 @@ func (me *htmlToPDFClient) CaptureHTMLToReader(html string, options ...HTMLToPDF
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/convert").JSON(opt).End()
+	resp, body, err := me.do("POST", "/convert").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
