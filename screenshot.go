@@ -18,7 +18,7 @@ func NewScreenshotClient(accessToken string) ScreenshotClient {
 		client: &client{
 			httpClient:  request.New(),
 			accessToken: accessToken,
-			basePath:    "https://restpack.io/api/screenshot/v3",
+			basePath:    "https://restpack.io/api/screenshot/v5",
 		},
 	}
 }
