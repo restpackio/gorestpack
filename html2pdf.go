@@ -2,6 +2,7 @@ package gorestpack
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"github.com/eknkc/request"
@@ -13,15 +14,13 @@ func NewHTMLToPDFClient(accessToken string) HTMLToPDFClient {
 		client: &client{
 			httpClient:  request.New(),
 			accessToken: accessToken,
-			basePath:    "https://restpack.io/api/html2pdf/v3",
+			basePath:    "https://restpack.io/api/html2pdf/v5",
 		},
 	}
 }
 
 // Options supplied to the Restpack Screenshot API for conversion
 type HTMLToPDFCaptureOptions struct {
-	// Force rendering a new pdf disregarding the cache status.
-	Fresh bool `json:"fresh,omitempty"`
 	// Custom page size for created document
 	PDFPage string `json:"pdf_page,omitempty"`
 	// CSS style margin sizes.
@@ -34,8 +33,8 @@ type HTMLToPDFCaptureOptions struct {
 	JS string `json:"js,omitempty"`
 	// Time in milliseconds to delay capture after page load
 	Delay int `json:"delay,omitempty"`
-	// Time in milliseconds for the resulting image to be cached for further requests.
-	TTL int `json:"ttl,omitempty"`
+	// Time in seconds for the resulting image to be cached for further requests.
+	CacheTTL int `json:"cache_ttl,omitempty"`
 	// Custom user-agent header string for the web request.
 	UserAgent string `json:"user_agent,omitempty"`
 	// Custom accept-language header string for the web request.
@@ -50,6 +49,22 @@ type HTMLToPDFCaptureOptions struct {
 	Wait string `json:"wait,omitempty"`
 	// Wait until a DOM element matching the provided css selector becomes present on the page.
 	Shutter string `json:"shutter,omitempty"`
+	// Ensure that the captured document does not get cached / stored for further use
+	Privacy bool `json:"privacy,omitempty"`
+	// If specified, ensures that the resulting file is saved with the given name.
+	Filename string `json:"filename,omitempty"`
+	//Custom pdf page width. Must be used together with PdfHeight
+	PdfWidth string `json:"pdf_width,omitempty"`
+	//Custom pdf page height. Check PdfWidth for details.
+	PdfHeight string `json:"pdf_height,omitempty"`
+	//HTML template for page header. It should have a valid markup and can contain elements with classes 'pageNumber', 'totalPages', 'url', 'title' or 'date'. Header is automatically added to all pages. Note that you need to have top margins on your documents in order to have the header show up.
+	PdfHeader string `json:"pdf_header,omitempty"`
+	//HTML template for page footer. Please check pdf_header information for details.
+	PdfFooter string `json:"pdf_footer,omitempty"`
+	//Removes the ads on the page
+	BlockAds bool `json:"block_ads,omitempty"`
+	//Block / hide European Union cookie warnings before capture.
+	BlockCookieWarnings bool `json:"block_cookie_warnings,omitempty"`
 }
 
 type htmlToPDFCallOptions struct {
@@ -65,7 +80,7 @@ type HTMLToPDFCaptureResult struct {
 	Width        string `json:"width,omitempty"`
 	Height       string `json:"height,omitempty"`
 	RemoteStatus string `json:"remote_status,omitempty"`
-	Cached       bool   `json:"cached,omitempty"`
+	Cached       bool   `json:"cached,string,omitempty"`
 	URL          string `json:"url,omitempty"`
 }
 
@@ -96,9 +111,21 @@ func (me *htmlToPDFClient) Capture(url string, options ...HTMLToPDFCaptureOption
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	var res HTMLToPDFCaptureResult
-	_, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		HTMLToPDFCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return HTMLToPDFCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.HTMLToPDFCaptureResult, errors.New(res.Error)
+	}
+
+	return res.HTMLToPDFCaptureResult, err
 }
 
 func (me *htmlToPDFClient) CaptureHTML(html string, options ...HTMLToPDFCaptureOptions) (HTMLToPDFCaptureResult, error) {
@@ -111,9 +138,21 @@ func (me *htmlToPDFClient) CaptureHTML(html string, options ...HTMLToPDFCaptureO
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	var res HTMLToPDFCaptureResult
-	_, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		HTMLToPDFCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/convert").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return HTMLToPDFCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.HTMLToPDFCaptureResult, errors.New(res.Error)
+	}
+
+	return res.HTMLToPDFCaptureResult, err
 }
 
 func (me *htmlToPDFClient) CaptureToReader(url string, options ...HTMLToPDFCaptureOptions) (io.Reader, error) {
@@ -126,10 +165,14 @@ func (me *htmlToPDFClient) CaptureToReader(url string, options ...HTMLToPDFCaptu
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/convert").JSON(opt).End()
+	resp, body, err := me.do("POST", "/convert").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
@@ -145,10 +188,14 @@ func (me *htmlToPDFClient) CaptureHTMLToReader(html string, options ...HTMLToPDF
 		opt.HTMLToPDFCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/convert").JSON(opt).End()
+	resp, body, err := me.do("POST", "/convert").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err

@@ -2,6 +2,7 @@ package gorestpack
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"io"
 
@@ -17,15 +18,13 @@ func NewScreenshotClient(accessToken string) ScreenshotClient {
 		client: &client{
 			httpClient:  request.New(),
 			accessToken: accessToken,
-			basePath:    "https://restpack.io/api/screenshot/v3",
+			basePath:    "https://restpack.io/api/screenshot/v5",
 		},
 	}
 }
 
 // Options supplied to the Restpack Screenshot API for conversion
 type ScreenshotCaptureOptions struct {
-	// Force rendering a new screenshot disregarding the cache status.
-	Fresh bool `json:"fresh,omitempty"`
 	// Capturing mode.
 	Mode string `json:"mode,omitempty"`
 	// Preferred image output format. If you need a raw html string you can pass html as format
@@ -44,8 +43,8 @@ type ScreenshotCaptureOptions struct {
 	JS string `json:"js,omitempty"`
 	// Time in milliseconds to delay capture after page load
 	Delay int `json:"delay,omitempty"`
-	// Time in milliseconds for the resulting image to be cached for further requests.
-	TTL int `json:"ttl,omitempty"`
+	// Time in seconds for the resulting image to be cached for further requests.
+	CacheTTL int `json:"cache_ttl,omitempty"`
 	// Custom user-agent header string for the web request.
 	UserAgent string `json:"user_agent,omitempty"`
 	// Custom accept-language header string for the web request.
@@ -64,6 +63,16 @@ type ScreenshotCaptureOptions struct {
 	Wait string `json:"wait,omitempty"`
 	// Wait until a DOM element matching the provided css selector becomes present on the page.
 	Shutter string `json:"shutter,omitempty"`
+	// Ensure that the captured document does not get cached / stored for further use
+	Privacy bool `json:"privacy,omitempty"`
+	// If specified, ensures that the resulting file is saved with the given name.
+	Filename string `json:"filename,omitempty"`
+	//Removes the ads on the page
+	BlockAds bool `json:"block_ads,omitempty"`
+	//Block / hide European Union cookie warnings before capture.
+	BlockCookieWarnings bool `json:"block_cookie_warnings,omitempty"`
+	// Do not render with default white background. You can use this option to generate transparent PNG images
+	OmitBackground bool `json:"omit_background,omitempty"`
 }
 
 type screenshotCallOptions struct {
@@ -79,7 +88,7 @@ type ScreenshotCaptureResult struct {
 	Width        string `json:"width,omitempty"`
 	Height       string `json:"height,omitempty"`
 	RemoteStatus string `json:"remote_status,omitempty"`
-	Cached       bool   `json:"cached,omitempty"`
+	Cached       bool   `json:"cached,string,omitempty"`
 	URL          string `json:"url,omitempty"`
 }
 
@@ -88,17 +97,17 @@ type ScreenshotClient interface {
 	// Capture a URL and return the information & cdn url
 	Capture(url string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
 	// Capture a HTML snippet and return the information & cdn url
-	CaptureHTML(url string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
+	CaptureHTML(html string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error)
 
 	// Capture a URL and return the image
 	CaptureToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error)
 	// Capture a HTML snippet and return the information & cdn url
-	CaptureHTMLToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error)
+	CaptureHTMLToImage(html string, options ...ScreenshotCaptureOptions) (image.Image, error)
 
 	// Capture a URL and return a reader for resulting image
 	CaptureToReader(url string, options ...ScreenshotCaptureOptions) (io.Reader, error)
 	// Capture a HTML snippet and returna a reader for resulting image
-	CaptureHTMLToReader(url string, options ...ScreenshotCaptureOptions) (io.Reader, error)
+	CaptureHTMLToReader(html string, options ...ScreenshotCaptureOptions) (io.Reader, error)
 }
 
 type screenshotClient struct {
@@ -115,9 +124,21 @@ func (me *screenshotClient) Capture(url string, options ...ScreenshotCaptureOpti
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	var res ScreenshotCaptureResult
-	_, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		ScreenshotCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return ScreenshotCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.ScreenshotCaptureResult, errors.New(res.Error)
+	}
+
+	return res.ScreenshotCaptureResult, err
 }
 
 func (me *screenshotClient) CaptureHTML(html string, options ...ScreenshotCaptureOptions) (ScreenshotCaptureResult, error) {
@@ -130,9 +151,21 @@ func (me *screenshotClient) CaptureHTML(html string, options ...ScreenshotCaptur
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	var res ScreenshotCaptureResult
-	_, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
-	return res, err
+	var res struct {
+		ScreenshotCaptureResult
+		Error string `json:"error"`
+	}
+	httpres, _, err := me.do("POST", "/capture").JSON(opt).EndStruct(&res)
+
+	if err != nil {
+		return ScreenshotCaptureResult{}, err
+	}
+
+	if httpres.StatusCode > 300 {
+		return res.ScreenshotCaptureResult, errors.New(res.Error)
+	}
+
+	return res.ScreenshotCaptureResult, err
 }
 
 func (me *screenshotClient) CaptureToImage(url string, options ...ScreenshotCaptureOptions) (image.Image, error) {
@@ -145,10 +178,14 @@ func (me *screenshotClient) CaptureToImage(url string, options ...ScreenshotCapt
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(body))
@@ -166,10 +203,14 @@ func (me *screenshotClient) CaptureHTMLToImage(html string, options ...Screensho
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(body))
@@ -187,10 +228,14 @@ func (me *screenshotClient) CaptureToReader(url string, options ...ScreenshotCap
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
@@ -206,10 +251,14 @@ func (me *screenshotClient) CaptureHTMLToReader(html string, options ...Screensh
 		opt.ScreenshotCaptureOptions = options[0]
 	}
 
-	_, body, err := me.do("POST", "/capture").JSON(opt).End()
+	resp, body, err := me.do("POST", "/capture").JSON(opt).End()
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 300 {
+		return nil, errors.New(resp.Status)
 	}
 
 	return bytes.NewReader(body), err
